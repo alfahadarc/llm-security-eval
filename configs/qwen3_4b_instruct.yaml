@@ -1,0 +1,8 @@
+model_id: Qwen/Qwen3-4B-Instruct-2507
+revision: null   # pin the exact commit hash after the first successful run
+dtype: float16
+device: cuda
+max_input_tokens: 8192
+max_new_tokens: 256
+do_sample: false
+trust_remote_code: false

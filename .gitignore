@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Environments
+.venv/
+venv/
+.conda/
+
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+hf_token*
+.huggingface/
+
+# Model weights and caches
+.cache/
+huggingface/
+models_cache/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.gguf
+
+# Results: raw generations are regenerable and large
+results/raw/
+results/*.png
+results/*.csv
+*.log
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
