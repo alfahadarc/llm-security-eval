@@ -5,7 +5,9 @@ dependencies:
   - python=3.11
   - pip
   - pip:
-      - torch
+      # PyTorch built for CUDA 12.8 (the server driver supports up to 12.8; cu130 builds fail)
+      - --extra-index-url https://download.pytorch.org/whl/cu128
+      - torch==2.8.0+cu128
       - transformers
       - accelerate
       - safetensors

@@ -1,0 +1,7 @@
+Python version: 3.11.17
+PyTorch version: 2.8.0+cu128
+Transformers version: 5.20.2
+CUDA available: True
+CUDA version: 12.8
+GPU name: Tesla V100-PCIE-16GB
+GPU VRAM: 15.8 GB
