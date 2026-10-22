@@ -16,8 +16,9 @@ ALL_FIELDS = set(STR_FIELDS) | set(NULLABLE_STR_FIELDS) | {"attack_present", "re
 CONDITIONS = ("clean", "attack", "benign")
 APPLICATIONS = ("document_summarization",)
 DELIVERIES = ("indirect_document",)
-OBJECTIVES = ("output_marker",)
-TECHNIQUES = ("ignore_previous_override",)
+OBJECTIVES = ("attacker_response", "secret_exfiltration", "format_hijack", "task_abandonment")
+TECHNIQUES = ("ignore_previous_override", "fake_system_message", "role_impersonation",
+              "delimiter_manipulation", "light_encoding")
 REQUIRED_FORMATS = ("three_bullets",)
 
 

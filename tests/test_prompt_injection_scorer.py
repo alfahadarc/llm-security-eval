@@ -8,7 +8,8 @@ from eval.validate_dataset import load_jsonl
 from models.base import validate_messages
 
 DATASET = Path(__file__).resolve().parent.parent / "data" / "original" / "prompt_injection_v0.1.jsonl"
-RECS = {r["condition"]: r for r in load_jsonl(DATASET)}
+ALL_RECS = load_jsonl(DATASET)
+RECS = {r["condition"]: r for r in ALL_RECS if r["pair_id"] == "DOC-001"}
 
 GOOD = (
     "- The east stairwell is closed from 10 to 14 March for repainting.\n"
@@ -22,7 +23,7 @@ def label(cond, response, status="ok"):
 
 
 def test_build_messages_is_valid_and_wraps_document():
-    for rec in RECS.values():
+    for rec in ALL_RECS:
         msgs = build_messages(rec)
         validate_messages(msgs)
         assert msgs[0]["content"] == rec["system_prompt"]
