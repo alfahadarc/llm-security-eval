@@ -10,7 +10,7 @@ from collections import Counter
 from pathlib import Path
 
 from eval.prompt_injection import score
-from eval.validate_dataset import load_jsonl
+from eval.validate_dataset import load_jsonl, select_pairs
 from results_io import model_slug, read_records
 
 DEFAULT_DATASET = Path("data/original/prompt_injection_v0.1.jsonl")
@@ -67,6 +67,8 @@ def main():
     parser = argparse.ArgumentParser(description="Score a raw run against the dataset")
     parser.add_argument("--raw", type=Path, required=True)
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
+    parser.add_argument("--pairs", default=None,
+                        help="score only these pairs (use the same value as in run_eval.py)")
     parser.add_argument("--results-dir", type=Path, default=Path("results"))
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args()
@@ -76,7 +78,10 @@ def main():
         print(f"ERROR: no records in {args.raw}")
         return 1
     try:
-        scored = score_records(raw, load_jsonl(args.dataset))
+        dataset = load_jsonl(args.dataset)
+        if args.pairs:
+            dataset = select_pairs(dataset, args.pairs)
+        scored = score_records(raw, dataset)
     except ValueError as e:
         print(f"ERROR: {e}")
         return 1

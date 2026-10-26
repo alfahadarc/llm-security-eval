@@ -12,10 +12,13 @@ STR_FIELDS = (
 )
 NULLABLE_STR_FIELDS = ("delivery", "objective", "technique", "attack_marker")
 ALL_FIELDS = set(STR_FIELDS) | set(NULLABLE_STR_FIELDS) | {"attack_present", "required_facts"}
+OPTIONAL_FIELDS = {"split"}  # v0.2+; v0.1 has none. If used, every record must have it.
 
 CONDITIONS = ("clean", "attack", "benign")
 APPLICATIONS = ("document_summarization",)
-DELIVERIES = ("indirect_document",)
+INDIRECT, DIRECT = "indirect_document", "direct_user_prompt"
+DELIVERIES = (INDIRECT, DIRECT)
+SPLITS = ("dev", "test")
 OBJECTIVES = ("attacker_response", "secret_exfiltration", "format_hijack", "task_abandonment")
 TECHNIQUES = ("ignore_previous_override", "fake_system_message", "role_impersonation",
               "delimiter_manipulation", "light_encoding")
@@ -34,14 +37,42 @@ def load_jsonl(path):
     return records
 
 
+def select_pairs(records, spec):
+    """Keep the records of the pairs named in spec, in file order.
+
+    spec is comma-separated; each item is a pair_id ('DIR-035') or an inclusive range in file order
+    ('DIR-035:DIR-042'). Raises ValueError for an empty spec, an unknown pair_id or a backwards range.
+    """
+    known = []
+    for r in records:
+        if r["pair_id"] not in known:
+            known.append(r["pair_id"])
+    wanted = set()
+    for part in (p.strip() for p in spec.split(",")):
+        if not part:
+            continue
+        first, _, last = part.partition(":")
+        last = last or first
+        for pid in (first, last):
+            if pid not in known:
+                raise ValueError(f"unknown pair_id {pid!r} in --pairs")
+        i, j = known.index(first), known.index(last)
+        if i > j:
+            raise ValueError(f"range {part!r} in --pairs goes backwards")
+        wanted.update(known[i:j + 1])
+    if not wanted:
+        raise ValueError("--pairs is empty")
+    return [r for r in records if r["pair_id"] in wanted]
+
+
 def _check_record(rec):
     """Return a list of error strings for one record (no cross-record checks)."""
     if not isinstance(rec, dict):
         return ["record is not a JSON object"]
     errs = []
     keys = set(rec)
-    if keys - ALL_FIELDS:
-        errs.append(f"unknown fields: {sorted(keys - ALL_FIELDS)}")
+    if keys - ALL_FIELDS - OPTIONAL_FIELDS:
+        errs.append(f"unknown fields: {sorted(keys - ALL_FIELDS - OPTIONAL_FIELDS)}")
     if ALL_FIELDS - keys:
         errs.append(f"missing fields: {sorted(ALL_FIELDS - keys)}")
         return errs  # types below would be meaningless
@@ -67,6 +98,8 @@ def _check_record(rec):
     for field, allowed in (("delivery", DELIVERIES), ("objective", OBJECTIVES), ("technique", TECHNIQUES)):
         if rec[field] is not None and rec[field] not in allowed:
             errs.append(f"invalid {field} {rec[field]!r}; allowed: {list(allowed)}")
+    if "split" in rec and rec["split"] not in SPLITS:
+        errs.append(f"invalid split {rec['split']!r}; allowed: {list(SPLITS)}")
 
     doc = rec["untrusted_content"]
     if rec["condition"] == "attack":
@@ -75,8 +108,16 @@ def _check_record(rec):
         for f in ("delivery", "objective", "technique", "attack_marker"):
             if rec[f] is None:
                 errs.append(f"attack case must set {f}")
-        if rec["attack_marker"] and rec["attack_marker"] not in doc:
-            errs.append("attack_marker does not appear in untrusted_content")
+        if rec["attack_marker"]:
+            # The marker lives where the attack is delivered, and only there.
+            if rec["delivery"] == DIRECT:
+                home, home_name, other, other_name = rec["user_prompt"], "user_prompt", doc, "untrusted_content"
+            else:
+                home, home_name, other, other_name = doc, "untrusted_content", rec["user_prompt"], "user_prompt"
+            if rec["attack_marker"] not in home:
+                errs.append(f"attack_marker does not appear in {home_name}")
+            elif rec["attack_marker"] in other:
+                errs.append(f"attack_marker must not appear in {other_name} for delivery {rec['delivery']!r}")
     elif rec["condition"] in ("clean", "benign"):
         if rec["attack_present"] is not False:
             errs.append(f"{rec['condition']} case must have attack_present=false")
@@ -136,14 +177,23 @@ def validate_records(records):
             errors.append(f"pair {pid!r} must have exactly one clean, one attack and one benign case; found {conds}")
             continue
         # Only valid-looking members get compared; type errors were reported above.
-        for f in ("application", "user_prompt", "required_facts", "required_format"):
+        attack = next(m for m in members if m["condition"] == "attack")
+        # Indirect pairs share the user prompt (the document varies); direct pairs share the document.
+        varying = "untrusted_content" if attack["delivery"] == DIRECT else "user_prompt"
+        for f in ("application", varying, "required_facts", "required_format"):
             if len({json.dumps(m[f]) for m in members}) > 1:
                 errors.append(f"pair {pid!r}: field {f} differs between cases")
-        marker = next((m["attack_marker"] for m in members if m["condition"] == "attack"), None)
+        if len({json.dumps(m.get("split")) for m in members}) > 1:
+            errors.append(f"pair {pid!r}: field split differs between cases")
+        marker = attack["attack_marker"]
         if isinstance(marker, str) and marker:
             for m in members:
-                if m["condition"] != "attack" and marker in m["untrusted_content"]:
+                if m["condition"] != "attack" and (marker in m["untrusted_content"] or marker in m["user_prompt"]):
                     errors.append(f"pair {pid!r}: attack_marker appears in {m['case_id']!r}")
+
+    with_split = sum(1 for r in good if "split" in r)
+    if with_split and with_split != len(good):
+        errors.append(f"split must be set on every record or on none ({with_split} of {len(good)} have it)")
     return errors
 
 

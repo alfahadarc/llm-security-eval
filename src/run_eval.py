@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from eval.prompt_injection import build_messages
-from eval.validate_dataset import load_jsonl, validate_records
+from eval.validate_dataset import load_jsonl, select_pairs, validate_records
 from results_io import append_record, make_record, new_run_id, results_path
 
 DEFAULT_DATASET = Path("data/original/prompt_injection_v0.1.jsonl")
@@ -37,6 +37,8 @@ def main():
     parser = argparse.ArgumentParser(description="Run the prompt-injection dataset on one model (raw output only)")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
+    parser.add_argument("--pairs", default=None,
+                        help="only run these pairs: ids and/or inclusive ranges, e.g. DIR-035:DIR-042,DOC-003")
     parser.add_argument("--experiment", default=DEFAULT_EXPERIMENT)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--results-dir", type=Path, default=Path("results"))
@@ -49,6 +51,13 @@ def main():
             print(f"ERROR: {e}")
         print("Dataset is invalid; nothing was run.")
         return 1
+    if args.pairs:  # the whole file was validated above; only the selected pairs are generated
+        try:
+            records = select_pairs(records, args.pairs)
+        except ValueError as e:
+            print(f"ERROR: {e}")
+            return 1
+        print(f"--pairs selected {len(records)} case(s)")
 
     # Heavy imports only after the cheap checks have passed.
     from models.huggingface_model import HuggingFaceChatModel, load_config
