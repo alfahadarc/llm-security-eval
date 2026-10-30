@@ -1,0 +1,8 @@
+model_id: google/gemma-3-4b-it
+revision: 093f9f388b31de276ce2de164bdc2081324b9767   # pinned 2026-10-28 after a passing smoke test
+dtype: bfloat16   # EXCEPTION: float16 gives NaN logits on Gemma 3 (empty output); see docs/MODELS.md
+device: cuda
+max_input_tokens: 8192
+max_new_tokens: 256
+do_sample: false
+trust_remote_code: false

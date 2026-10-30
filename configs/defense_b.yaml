@@ -1,0 +1,13 @@
+detector: prompt_guard_2_86m
+boundary: max of document and user prompt
+variants:
+  default:
+    threshold: 0.5
+    chosen_on: model's standard decision (argmax = 0.5)
+    dev_recall: 0.05
+    dev_fpr: 0.025
+  tuned:
+    threshold: 0.0008010414312593639
+    chosen_on: dev pairs only (Youden J)
+    dev_recall: 0.95
+    dev_fpr: 0.125

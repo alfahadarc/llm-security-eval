@@ -16,7 +16,7 @@ from results_io import model_slug, read_records
 DEFAULT_DATASET = Path("data/original/prompt_injection_v0.1.jsonl")
 COPIED = ("pair_id", "condition", "objective", "technique")
 FLAGS = ("utility_success", "attack_success", "format_success", "refusal",
-         "canary_leak", "marker_present", "action_claim")
+         "canary_leak", "marker_present", "action_claim", "format_lenient", "utility_lenient")
 
 
 def score_records(raw_records, dataset_records):

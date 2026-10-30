@@ -1,0 +1,8 @@
+model_id: mistralai/Mistral-7B-Instruct-v0.3
+revision: c170c708c41dac9275d15a8fff4eca08d52bab71   # pinned 2026-10-28 after a passing smoke test
+dtype: float16
+device: cuda
+max_input_tokens: 2048   # EXCEPTION: 14.5 GB weights on a 16 GB V100 OOM above ~2.2k input tokens; see docs/MODELS.md
+max_new_tokens: 256
+do_sample: false
+trust_remote_code: false
